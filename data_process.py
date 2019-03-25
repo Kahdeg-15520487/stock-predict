@@ -85,3 +85,4 @@ with open(FILE_NAME_CSV, mode='w') as csv_file:
         writer.writerow({'date': date, 'open': row['1. open'], 'high': row['2. high'], 'low': row['3. low'], 'close': row['4. close']})
     
 plot()
+
