@@ -21,7 +21,7 @@ plt.rcParams['figure.figsize']=(20,10)
 plt.style.use('ggplot')
 
 #function to get stock data
-def yahoo_stocks(symbol, start, end):
+def aa_stocks(symbol, start, end):
     return pdDataReader.time_series.AVTimeSeriesReader(symbol,api_key=apiKey)
 
 def get_historical_stock_price(stock):
@@ -32,11 +32,14 @@ def get_historical_stock_price(stock):
    # date = datetime.datetime.now().date()
    # endDate = pd.to_datetime(date)
     endDate = datetime.datetime(2017, 11, 27)
-    stockData = yahoo_stocks(stock, startDate, endDate)
+    stockData = aa_stocks(stock, startDate, endDate)
     return stockData.read()
 
 def main():
     stock = input("Enter stock name(ex:GOOGL, AAPL): ")
+
+    num_days = int(input("Enter no of days to predict stock price for: "))
+    
     df_whole = get_historical_stock_price(stock)
     
     df = df_whole.filter(['close'])
@@ -47,13 +50,11 @@ def main():
     
     model = Prophet()
     model.fit(df)
-
-    num_days = int(input("Enter no of days to predict stock price for: "))
     
     future = model.make_future_dataframe(periods=num_days)
     forecast = model.predict(future)
     
-    print (forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
+    print (forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(num_days))
     
     #Prophet plots the observed values of our time series (the black dots), the forecasted values (blue line) and
     #the uncertainty intervalsof our forecasts (the blue shaded regions).
@@ -69,7 +70,7 @@ def main():
     
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-#    ax1.xaxis_date()
+
     ax1.plot(viz_df.index, viz_df['close'])
     ax1.plot(viz_df.index, viz_df.yhat_scaled, linestyle=':')
     ax1.set_title('Actual Close (Orange) vs Close Forecast (Black)')
@@ -80,7 +81,7 @@ def main():
     L.get_texts()[0].set_text('Actual Close') #change the legend text for 1st plot
     L.get_texts()[1].set_text('Forecasted Close') #change the legend text for 2nd plot
     
-    plt.savefig('graph/prophet.png', bbox_inches='tight')
+    plt.savefig('graph/prophet_'+stock+'.svg', bbox_inches='tight', format='svg', dpi=1200)
     plt.show()
     
     #plot using dataframe's plot function
