@@ -21,18 +21,14 @@ plt.rcParams['figure.figsize']=(20,10)
 plt.style.use('ggplot')
 
 #function to get stock data
-def aa_stocks(symbol, start, end):
+def aa_stocks(symbol):
     return pdDataReader.time_series.AVTimeSeriesReader(symbol,api_key=apiKey)
 
 def get_historical_stock_price(stock):
     print ("Getting historical stock prices for stock ", stock)
     
-    #get 7 year stock data for Apple
-    startDate = datetime.datetime(2010, 1, 4)
-   # date = datetime.datetime.now().date()
-   # endDate = pd.to_datetime(date)
-    endDate = datetime.datetime(2017, 11, 27)
-    stockData = aa_stocks(stock, startDate, endDate)
+    stockData = aa_stocks(stock)
+    
     return stockData.read()
 
 def main():
@@ -40,6 +36,8 @@ def main():
 
     num_days = int(input("Enter no of days to predict stock price for: "))
     
+    # dac diem du lieu, san nao, 
+    # cac buoc thuc hien va danh gia model
     df_whole = get_historical_stock_price(stock)
     
     df = df_whole.filter(['close'])
@@ -53,8 +51,6 @@ def main():
     
     future = model.make_future_dataframe(periods=num_days)
     forecast = model.predict(future)
-    
-    print (forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(num_days))
     
     #Prophet plots the observed values of our time series (the black dots), the forecasted values (blue line) and
     #the uncertainty intervalsof our forecasts (the blue shaded regions).
@@ -89,6 +85,8 @@ def main():
     viz_df['Forecasted Close'] = viz_df['yhat_scaled']
     
     viz_df[['Actual Close', 'Forecasted Close']].plot()
+    
+    print (forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(num_days))
     
 if __name__ == "__main__":
     main()
