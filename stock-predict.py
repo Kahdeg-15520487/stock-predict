@@ -52,6 +52,8 @@ def main():
     future = model.make_future_dataframe(periods=num_days)
     forecast = model.predict(future)
     
+    last10 = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(num_days*3)
+    
     #Prophet plots the observed values of our time series (the black dots), the forecasted values (blue line) and
     #the uncertainty intervalsof our forecasts (the blue shaded regions).
     forecast_plot = model.plot(forecast)
@@ -86,7 +88,7 @@ def main():
     
     viz_df[['Actual Close', 'Forecasted Close']].plot()
     
-    print (forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(num_days))
+    print (last10)
     
 if __name__ == "__main__":
     main()
