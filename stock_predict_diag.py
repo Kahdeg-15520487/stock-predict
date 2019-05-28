@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import pandas_datareader.av as pdDataReader
 from fbprophet import Prophet
+from fbprophet.diagnostics import cross_validation as xvalid
 import datetime
 import matplotlib.pyplot as plt
  
@@ -30,6 +31,10 @@ def get_historical_stock_price(stock):
     stockData = aa_stocks(stock)
     
     return stockData.read()
+
+def mean_absolute_percentage_error(y_true,y_pred):
+    y_true, y_pred=np.array(y_true),np.array(y_pred)
+    return np.mean(np.abs((y_true-y_pred)/y_true))*100
 
 def main():
     stock = input("Enter stock name(ex:GOOGL, AAPL): ")
@@ -52,6 +57,10 @@ def main():
     future = model.make_future_dataframe(periods=num_days)
     forecast = model.predict(future)
     
+    #cv_result = xvalid(model)
+    mape_baseline = mean_absolute_percentage_error(df["y"],forecast["yhat"])
+    
+    last10 = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(num_days*3)
     
     #Prophet plots the observed values of our time series (the black dots), the forecasted values (blue line) and
     #the uncertainty intervalsof our forecasts (the blue shaded regions).
@@ -64,8 +73,6 @@ def main():
     
     viz_df = df.join(forecast[['yhat', 'yhat_lower','yhat_upper']], how = 'outer')
     viz_df['yhat_scaled'] = np.exp(viz_df['yhat'])
-    
-    last10 = viz_df[['yhat_scaled']].tail(num_days)
     
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
@@ -89,7 +96,8 @@ def main():
     
     viz_df[['Actual Close', 'Forecasted Close']].plot()
     
-    print (last10.to_csv())
+    print (last10)
+    print ("mape="+mape_baseline)
     
 if __name__ == "__main__":
     main()
