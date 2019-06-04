@@ -2,3 +2,4 @@ config.json
 historical.json
 historical.csv
 graph/
+*.csv
