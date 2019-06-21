@@ -5,11 +5,18 @@ Created on Mon Mar 25 22:21:29 2019
 @author: kahdeg
 """
 
+import warnings
+warnings.filterwarnings('ignore')
+
+import sys
 import json
 import pandas as pd
 import numpy as np
 import pandas_datareader.av as pdDataReader
 from fbprophet import Prophet
+from fbprophet.diagnostics import cross_validation
+from fbprophet.diagnostics import performance_metrics
+from fbprophet.plot import plot_cross_validation_metric
 import datetime
 import matplotlib.pyplot as plt
 import os
@@ -37,6 +44,7 @@ def get_historical_stock_price(stock):
     return stockData.read()
 
 def preprocess_stock_data(data):
+    print ("Preprocessing data")
     df = data
     df['year'] = data.index.year
     yearList = list(set(df['year'].tolist()))
@@ -49,46 +57,65 @@ def preprocess_stock_data(data):
 #    return 
 
 def main():
-    stock = input("Enter stock name(ex:GOOGL, AAPL): ")
+    if len(sys.argv) == 2:
+        stock = sys.argv[1]
+    else:
+        stock = input("Enter stock name(ex:GOOGL, AAPL): ")
     createDir('graph/'+stock)
-
-    num_days = int(input("Enter no of days to predict stock price for: "))
+    csvFile ='graph/'+stock+'/data_'+stock+'_'+datetime.datetime.now().strftime("%d_%b_%Y")+'.csv'
     
-    # dac diem du lieu, san nao, 
-    # cac buoc thuc hien va danh gia model
-    df_whole = get_historical_stock_price(stock)
-#    
-    df = df_whole.filter(['close'])
+    if os.path.isfile(csvFile):
+        df = pd.read_csv(csvFile,index_col='index')
+    else:        
+        df_whole = get_historical_stock_price(stock)
         
-#    df.to_csv('data_'+stock+'_'+datetime.datetime.now().strftime("%d_%b_%Y")+'.csv')
+        df = df_whole.filter(['close'])
+            
+        df.to_csv(csvFile)
+        csvFixed = 'index'
+        with open(csvFile, 'r') as myfile:
+            csvFixed+=myfile.read()
+        with open(csvFile, 'w') as myfile:
+            myfile.write(csvFixed)
     
-#    df = pd.read_csv('data_msft_04_Jun_2019.csv',index_col='index')
     df.index = pd.to_datetime(df.index)
     df['ds'] = df.index
     #log transform the ‘Close’ variable to convert non-stationary data to stationary.
     df['y'] = np.log(df['close'])
     
     dfByYear = preprocess_stock_data(df)
-    
-    model = Prophet(
-            daily_seasonality=False,
-            weekly_seasonality =False,
-            yearly_seasonality=False
-            )
+    firstYear = dfByYear[0][1]
+    lastYear = dfByYear[-1][1]
     
     for (dfy,yr) in dfByYear:
         
+        initial = (yr-firstYear+1)*365
+    
+        model = Prophet(
+                daily_seasonality=True,
+                weekly_seasonality =True,
+                yearly_seasonality=True
+                )
+        
         model.fit(dfy)
         
-        future = model.make_future_dataframe(periods=num_days)
+        future = model.make_future_dataframe(periods=365)
         forecast = model.predict(future)
         
+        if(yr == lastYear):
+            print('initial = '+str(initial))
+            df_cv = cross_validation(model, horizon = '180 days')
+            print(df_cv.head())
+            df_p = performance_metrics(df_cv)
+            print(df_p.head())
+            fig = plot_cross_validation_metric(df_cv, metric='mape')
+            fig.savefig('graph/'+stock+'/'+stock+'_'+str(firstYear)+'_to_'+str(yr)+'_MAPE.svg', bbox_inches='tight', format='svg', dpi=1200)
         
         #Prophet plots the observed values of our time series (the black dots), the forecasted values (blue line) and
         #the uncertainty intervalsof our forecasts (the blue shaded regions).
         forecast_plot = model.plot(forecast)
-        forecast_plot.show()
-        forecast_plot.savefig('graph/'+stock+'/'+stock+'_uncertainty.svg', bbox_inches='tight', format='svg', dpi=1200)
+#        forecast_plot.show()
+        forecast_plot.savefig('graph/'+stock+'/'+stock+'_'+str(firstYear)+'_to_'+str(yr)+'_uncertainty.svg', bbox_inches='tight', format='svg', dpi=1200)
         
         #make the vizualization a little better to understand
         dfy.set_index('ds', inplace=True)
@@ -105,7 +132,7 @@ def main():
         viz_df = dfy.join(forecast[['yhat', 'yhat_lower','yhat_upper']], how = 'outer')
         viz_df['yhat_scaled'] = np.exp(viz_df['yhat'])
         
-        last10 = viz_df[['yhat_scaled']].tail(num_days)
+        forecasted = viz_df[['yhat_scaled']].tail(365)
         
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
@@ -121,7 +148,7 @@ def main():
         L.get_texts()[1].set_text('Forecasted Close')
         
         plt.savefig('graph/'+stock+'/'+stock+'_'+str(yr)+'.svg', bbox_inches='tight', format='svg', dpi=1200)
-        plt.show()
+#        plt.show()
         
         #plot using dataframe's plot function
         viz_df['Actual Close'] = viz_df['close']
