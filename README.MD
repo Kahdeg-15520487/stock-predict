@@ -7,8 +7,7 @@ for use within an anaconda environment with tensorflow
 plotly  
 pandas  
 keras  
-prophet  
-tensorflow
+prophet
 
 ## Service in use:
 
